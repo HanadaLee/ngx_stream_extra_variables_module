@@ -45,7 +45,8 @@ static ngx_int_t ngx_stream_extra_variable_hostname_lowercase(
 static ngx_int_t ngx_stream_extra_variable_time_rfc1123(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
 
-static ngx_int_t ngx_stream_extra_variable_upstream_addr(ngx_stream_session_t *s,
+static ngx_int_t ngx_stream_extra_variable_upstream_addr(
+    ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_stream_extra_variable_upstream_tries(
     ngx_stream_session_t *s, ngx_stream_variable_value_t *v, uintptr_t data);
@@ -74,14 +75,14 @@ static ngx_int_t ngx_stream_extra_variable_upstream_total_length(
 
 
 static ngx_stream_module_t  ngx_stream_extra_variables_module_ctx = {
-    ngx_stream_add_extra_variables,               /* preconfiguration */
+    ngx_stream_add_extra_variables,             /* preconfiguration */
     NULL,                                       /* postconfiguration */
 
-    NULL,                                       /* create main configuration */
-    NULL,                                       /* init main configuration */
+    NULL,                                       /* create main conf */
+    NULL,                                       /* init main conf */
 
-    NULL,                                       /* create server configuration */
-    NULL                                        /* merge server configuration */
+    NULL,                                       /* create server conf */
+    NULL                                        /* merge server conf */
 };
 
 
@@ -107,11 +108,11 @@ static ngx_stream_variable_t  ngx_stream_extra_variables[] = {
       0, 0, 0 },
 
     { ngx_string("sec"), NULL,
-      ngx_stream_extra_variable_sec, 
+      ngx_stream_extra_variable_sec,
       0, NGX_STREAM_VAR_NOCACHEABLE, 0 },
 
     { ngx_string("hextime"), NULL,
-      ngx_stream_extra_variable_hextime, 
+      ngx_stream_extra_variable_hextime,
       0, NGX_STREAM_VAR_NOCACHEABLE, 0 },
 
     { ngx_string("connection_established_msec"), NULL,
@@ -361,9 +362,8 @@ ngx_stream_extra_variable_connection_established_msec(ngx_stream_session_t *s,
 
     tp = ngx_timeofday();
 
-    ms = (ngx_msec_t)
-            (tp->sec * 1000 + tp->msec
-                + s->connection->start_time - ngx_current_msec);
+    ms = (ngx_msec_t) (tp->sec * 1000 + tp->msec
+                       + s->connection->start_time - ngx_current_msec);
 
     v->len = ngx_sprintf(p, "%T.%03M", (time_t) ms / 1000, ms % 1000) - p;
     v->valid = 1;
@@ -502,7 +502,7 @@ ngx_stream_extra_variable_upstream_addr(ngx_stream_session_t *s,
 
     state = s->upstream_states->elts;
     state = &state[s->upstream_states->nelts - 1];
-    
+
     if (state->peer) {
         v->len = state->peer->len;
         v->data = ngx_pnalloc(s->connection->pool, v->len);
@@ -530,7 +530,7 @@ static ngx_int_t
 ngx_stream_extra_variable_upstream_tries(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data)
 {
-    u_char  *p;
+    u_char     *p;
     ngx_uint_t  tries;
 
     if (s->upstream_states && s->upstream_states->nelts > 0) {
@@ -575,6 +575,7 @@ ngx_stream_extra_variable_upstream_status(ngx_stream_session_t *s,
             v->not_found = 1;
             return NGX_OK;
         }
+
         state = s->upstream_states->elts;
         state = &state[s->upstream_states->nelts - 1];
     }
@@ -643,6 +644,7 @@ ngx_stream_extra_variable_upstream_multi_msec(ngx_stream_session_t *s,
         case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_CONNECTED_MSEC:
             if (state[i].connect_time == (ngx_msec_t) -1) {
                 ms = (ngx_msec_t) -1;
+
             } else {
                 ms = (ngx_msec_t) (state[i].start_msec + state[i].connect_time);
             }
@@ -651,16 +653,18 @@ ngx_stream_extra_variable_upstream_multi_msec(ngx_stream_session_t *s,
         case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_FIRST_BYTE_MSEC:
             if (state[i].first_byte_time == (ngx_msec_t) -1) {
                 ms = (ngx_msec_t) -1;
+
             } else {
-                ms = (ngx_msec_t) (state[i].start_msec + state[i].first_byte_time);
+                ms = state[i].start_msec + state[i].first_byte_time;
             }
             break;
 
         case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_END_MSEC:
             if (state[i].response_time == (ngx_msec_t) -1) {
                 ms = (ngx_msec_t) -1;
+
             } else {
-                ms = (ngx_msec_t) (state[i].start_msec + state[i].response_time);
+                ms = state[i].start_msec + state[i].response_time;
             }
             break;
 
@@ -709,9 +713,9 @@ static ngx_int_t
 ngx_stream_extra_variable_upstream_single_msec(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data)
 {
-    u_char                     *p;
-    ngx_time_t                 *tp;
-    ngx_msec_t                  ms;
+    u_char                       *p;
+    ngx_time_t                   *tp;
+    ngx_msec_t                    ms;
     ngx_stream_upstream_state_t  *state;
 
     if (s->upstream && s->upstream->state) {
@@ -722,6 +726,7 @@ ngx_stream_extra_variable_upstream_single_msec(ngx_stream_session_t *s,
             v->not_found = 1;
             return NGX_OK;
         }
+
         state = s->upstream_states->elts;
         state = &state[s->upstream_states->nelts - 1];
     }
@@ -737,6 +742,7 @@ ngx_stream_extra_variable_upstream_single_msec(ngx_stream_session_t *s,
     case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_CONNECTED_MSEC:
         if (state->connect_time == (ngx_msec_t) -1) {
             ms = (ngx_msec_t) -1;
+
         } else {
             ms = (ngx_msec_t) (state->start_msec + state->connect_time);
         }
@@ -745,6 +751,7 @@ ngx_stream_extra_variable_upstream_single_msec(ngx_stream_session_t *s,
     case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_FIRST_BYTE_MSEC:
         if (state->first_byte_time == (ngx_msec_t) -1) {
             ms = (ngx_msec_t) -1;
+
         } else {
             ms = (ngx_msec_t) (state->start_msec + state->first_byte_time);
         }
@@ -753,6 +760,7 @@ ngx_stream_extra_variable_upstream_single_msec(ngx_stream_session_t *s,
     case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_END_MSEC:
         if (state->response_time == (ngx_msec_t) -1) {
             ms = (ngx_msec_t) -1;
+
         } else {
             ms = (ngx_msec_t) (state->start_msec + state->response_time);
         }
@@ -804,8 +812,8 @@ static ngx_int_t
 ngx_stream_extra_variable_upstream_single_time(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data)
 {
-    u_char                     *p;
-    ngx_msec_int_t              ms;
+    u_char                       *p;
+    ngx_msec_int_t                ms;
     ngx_stream_upstream_state_t  *state;
 
     if (s->upstream && s->upstream->state) {
@@ -816,6 +824,7 @@ ngx_stream_extra_variable_upstream_single_time(ngx_stream_session_t *s,
             v->not_found = 1;
             return NGX_OK;
         }
+
         state = s->upstream_states->elts;
         state = &state[s->upstream_states->nelts - 1];
     }
@@ -878,8 +887,8 @@ static ngx_int_t
 ngx_stream_extra_variable_upstream_single_length(ngx_stream_session_t *s,
     ngx_stream_variable_value_t *v, uintptr_t data)
 {
-    ngx_stream_upstream_state_t *state;
-    u_char *p;
+    ngx_stream_upstream_state_t  *state;
+    u_char                       *p;
 
     if (s->upstream && s->upstream->state) {
         state = s->upstream->state;
@@ -889,6 +898,7 @@ ngx_stream_extra_variable_upstream_single_length(ngx_stream_session_t *s,
             v->not_found = 1;
             return NGX_OK;
         }
+
         state = s->upstream_states->elts;
         state = &state[s->upstream_states->nelts - 1];
     }
@@ -900,7 +910,7 @@ ngx_stream_extra_variable_upstream_single_length(ngx_stream_session_t *s,
 
     v->data = p;
 
-    switch(data) {
+    switch (data) {
 
     case NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_BYTES_RECEIVED:
         p = ngx_sprintf(p, "%O", state->bytes_received);
@@ -940,6 +950,7 @@ ngx_stream_extra_variable_upstream_total_length(ngx_stream_session_t *s,
         for (i = 0; i < s->upstream_states->nelts; i++) {
             if (data == NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_BYTES_RECEIVED) {
                 total += state[i].bytes_received;
+
             } else {
                 total += state[i].bytes_sent;
             }
@@ -950,6 +961,7 @@ ngx_stream_extra_variable_upstream_total_length(ngx_stream_session_t *s,
 
         if (data == NGX_STREAM_EXTRA_VARIABLE_UPSTREAM_BYTES_RECEIVED) {
             total = state->bytes_received;
+
         } else {
             total = state->bytes_sent;
         }
