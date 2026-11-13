@@ -104,6 +104,8 @@ This Nginx module is licensed under [BSD 2-Clause License](LICENSE).
 
 ## Installation
 
+Build with `--with-stream` and `--add-module`. Dynamic modules and a dynamic Stream subsystem are not supported.
+
 For upstream timing variables, apply the bundled patches to nginx 1.31.8 before building:
 
 ```sh

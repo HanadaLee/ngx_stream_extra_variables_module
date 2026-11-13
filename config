@@ -1,4 +1,15 @@
 ngx_addon_name=ngx_stream_extra_variables_module
+
+if [ "$ngx_module_link" = DYNAMIC ]; then
+    echo "$0: error: ngx_stream_extra_variables_module must be built with --add-module"
+    exit 1
+fi
+
+if [ "$STREAM" = DYNAMIC ]; then
+    echo "$0: error: ngx_stream_extra_variables_module requires a static Stream subsystem (--with-stream)"
+    exit 1
+fi
+
 ngx_module_srcs="$ngx_addon_dir/$ngx_addon_name.c"
 
 if test -n "$ngx_module_link"; then
