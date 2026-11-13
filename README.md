@@ -2,7 +2,7 @@
 
 A collection of extra variables for NGINX stream module. Used to meet logging or other needs.
 
-Some of these variables require the nginx core patch [nginx-ext.patch](https://git.hanada.info/hanada/openresty/-/tree/main/patches) to work. These variables are marked with * in the following text.
+Variables marked with * require additional core support. The bundled patch provides upstream timing; upstream status requires separate core support.
 
 ## Embedded Variables
 
@@ -101,3 +101,14 @@ Hanada im@hanada.info
 # License
 
 This Nginx module is licensed under [BSD 2-Clause License](LICENSE).
+
+## Installation
+
+For upstream timing variables, apply the bundled patches to nginx 1.31.8 before building:
+
+```sh
+bash /path/to/ngx_stream_extra_variables_module/util/apply-nginx-patches.sh /path/to/nginx
+cd /path/to/nginx
+./configure --with-stream --add-module=/path/to/ngx_stream_extra_variables_module
+make
+```

@@ -24,9 +24,25 @@ configure_args=(
 
 configure_args+=(--add-module="$module_root")
 
+if [[ "${TEST_CORE_PATCH:-enabled}" == enabled ]]; then
+    bash "$module_root/util/apply-nginx-patches.sh" "$nginx_source"
+fi
+
 cd "$nginx_source"
-sh ./configure "${configure_args[@]}"
+configure=./configure
+[[ -f "$configure" ]] || configure=auto/configure
+sh "$configure" "${configure_args[@]}"
 make -j"$build_jobs"
+
+export TEST_NGINX_UPSTREAM_TIMING=0
+if grep -q '^#define NGX_STREAM_UPSTREAM_TIMING  *1$' objs/ngx_auto_config.h; then
+    export TEST_NGINX_UPSTREAM_TIMING=1
+fi
+
+export TEST_NGINX_UPSTREAM_STATUS=0
+if grep -q '^#define NGX_RESTY_EXT  *1$' objs/ngx_auto_config.h; then
+    export TEST_NGINX_UPSTREAM_STATUS=1
+fi
 
 export TEST_NGINX_BINARY="$nginx_source/objs/nginx"
 export PERL5LIB="$module_root/.ci/nginx-tests/lib"
@@ -52,4 +68,5 @@ if (( ${#tests[@]} == 0 )); then
     echo "No tests selected" >&2
     exit 1
 fi
-prove -v "${tests[@]}"
+prove -v "${tests[@]}" | tee "$test_output/tests.log"
+grep -q '^Result: PASS$' "$test_output/tests.log"

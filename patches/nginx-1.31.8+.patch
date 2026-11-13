@@ -1,0 +1,24 @@
+--- a/src/stream/ngx_stream_upstream.h
++++ b/src/stream/ngx_stream_upstream.h
+@@ -15,2 +15,5 @@
+ #include <ngx_event_connect.h>
++
++
++#define NGX_STREAM_UPSTREAM_TIMING  1
+ 
+@@ -102,2 +105,6 @@
+ 
++#if (NGX_STREAM_UPSTREAM_TIMING)
++    ngx_msec_t                         start_msec;
++#endif
++
+     ngx_str_t                         *peer;
+--- a/src/stream/ngx_stream_proxy_module.c
++++ b/src/stream/ngx_stream_proxy_module.c
+@@ -801,2 +801,6 @@
+ 
++#if (NGX_STREAM_UPSTREAM_TIMING)
++    u->state->start_msec = ngx_current_msec;
++#endif
++
+     u->state->connect_time = (ngx_msec_t) -1;

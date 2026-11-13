@@ -24,7 +24,9 @@ my $t = Test::Nginx->new()
 	->has(qw/stream stream_return ngx_stream_extra_variables_module/)
 	->plan(49);
 
-$t->write_file_expand('nginx.conf', <<'EOF');
+my $timing = $ENV{TEST_NGINX_UPSTREAM_TIMING} // 1;
+my $status = $ENV{TEST_NGINX_UPSTREAM_STATUS} // 1;
+my $config = <<'EOF';
 
 %%TEST_GLOBALS%%
 
@@ -76,6 +78,10 @@ stream {
 
 EOF
 
+$config =~ s/\$upstream_last_status/-/g unless $status;
+$config =~ s/\$upstream_(?:last_)?(?:start|connected|first_byte|end)_msec/-/g
+    unless $timing;
+$t->write_file_expand('nginx.conf', $config);
 $t->run();
 
 ###############################################################################
@@ -99,21 +105,27 @@ like($m{rfc}, qr/^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT
 	'RFC 1123 time variable');
 is($m{addr}, '127.0.0.1:' . port(8081), 'last upstream address');
 is($m{tries}, '1', 'upstream attempt count');
-is($m{status}, '200', 'last upstream status');
-like($m{start}, qr/^\d+\.\d{3}$/, 'upstream start timestamp');
-is($m{start}, $m{last_start}, 'last start timestamp');
-like($m{connected}, qr/^\d+\.\d{3}$/, 'upstream connected timestamp');
-is($m{connected}, $m{last_connected}, 'last connected timestamp');
-like($m{first}, qr/^\d+\.\d{3}$/, 'upstream first byte timestamp');
-is($m{first}, $m{last_first}, 'last first byte timestamp');
-like($m{end}, qr/^\d+\.\d{3}$/, 'upstream end timestamp');
-is($m{end}, $m{last_end}, 'last end timestamp');
-cmp_ok(msec($m{start}), '<=', msec($m{connected}),
-	'upstream timestamps are ordered at connect');
-cmp_ok(msec($m{connected}), '<=', msec($m{first}),
-	'upstream timestamps are ordered at first byte');
-cmp_ok(msec($m{first}), '<=', msec($m{end}),
-	'upstream timestamps are ordered at end');
+SKIP: {
+	skip 'requires extended upstream status', 1 unless $status;
+	is($m{status}, '200', 'last upstream status');
+}
+SKIP: {
+	skip 'requires upstream timing core patch', 11 unless $timing;
+	like($m{start}, qr/^\d+\.\d{3}$/, 'upstream start timestamp');
+	is($m{start}, $m{last_start}, 'last start timestamp');
+	like($m{connected}, qr/^\d+\.\d{3}$/, 'upstream connected timestamp');
+	is($m{connected}, $m{last_connected}, 'last connected timestamp');
+	like($m{first}, qr/^\d+\.\d{3}$/, 'upstream first byte timestamp');
+	is($m{first}, $m{last_first}, 'last first byte timestamp');
+	like($m{end}, qr/^\d+\.\d{3}$/, 'upstream end timestamp');
+	is($m{end}, $m{last_end}, 'last end timestamp');
+	cmp_ok(msec($m{start}), '<=', msec($m{connected}),
+		'upstream timestamps are ordered at connect');
+	cmp_ok(msec($m{connected}), '<=', msec($m{first}),
+		'upstream timestamps are ordered at first byte');
+	cmp_ok(msec($m{first}), '<=', msec($m{end}),
+		'upstream timestamps are ordered at end');
+}
 like($m{connect_time}, qr/^\d+\.\d{3}$/, 'last connect duration');
 like($m{first_time}, qr/^\d+\.\d{3}$/, 'last first byte duration');
 like($m{session_time}, qr/^\d+\.\d{3}$/, 'last session duration');
@@ -127,15 +139,21 @@ my %r = fields($t->read_file('retry.log'));
 
 is($r{addr}, '127.0.0.1:' . port(8081), 'retry last upstream address');
 is($r{tries}, '2', 'retry upstream attempt count');
-is($r{status}, '200', 'retry last upstream status');
-like($r{start}, qr/^\d+\.\d{3}, \d+\.\d{3}$/,
-	'retry start timestamps include both attempts');
-like($r{connected}, qr/^-, \d+\.\d{3}$/,
-	'retry connected timestamps record failed attempt');
-like($r{first}, qr/^-, \d+\.\d{3}$/,
-	'retry first byte timestamps record failed attempt');
-like($r{end}, qr/^\d+\.\d{3}, \d+\.\d{3}$/,
-	'retry end timestamps include both attempts');
+SKIP: {
+	skip 'requires extended upstream status', 1 unless $status;
+	is($r{status}, '200', 'retry last upstream status');
+}
+SKIP: {
+	skip 'requires upstream timing core patch', 4 unless $timing;
+	like($r{start}, qr/^\d+\.\d{3}, \d+\.\d{3}$/,
+		'retry start timestamps include both attempts');
+	like($r{connected}, qr/^-, \d+\.\d{3}$/,
+		'retry connected timestamps record failed attempt');
+	like($r{first}, qr/^-, \d+\.\d{3}$/,
+		'retry first byte timestamps record failed attempt');
+	like($r{end}, qr/^\d+\.\d{3}, \d+\.\d{3}$/,
+		'retry end timestamps include both attempts');
+}
 like($r{connect_time}, qr/^\d+\.\d{3}$/, 'retry last connect duration');
 like($r{first_time}, qr/^\d+\.\d{3}$/, 'retry last first byte duration');
 like($r{session_time}, qr/^\d+\.\d{3}$/, 'retry last session duration');
@@ -147,8 +165,15 @@ my %d = fields($t->read_file('direct.log'));
 
 is($d{addr}, '-', 'no-upstream address is not found');
 is($d{tries}, '-', 'no-upstream attempt count is not found');
-is($d{status}, '-', 'no-upstream status is not found');
-is($d{start}, '-', 'no-upstream timestamps are not found');
+SKIP: {
+	skip 'requires extended upstream status', 1 unless $status;
+	is($d{status}, '-', 'no-upstream status is not found');
+}
+SKIP: {
+	skip 'requires upstream timing core patch', 1 unless $timing;
+	is($d{start}, '-', 'no-upstream timestamps are not found');
+}
+
 
 ###############################################################################
 
