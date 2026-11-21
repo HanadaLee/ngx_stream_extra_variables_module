@@ -50,7 +50,7 @@ static ngx_int_t ngx_stream_extra_variable_upstream_addr(
     ngx_stream_variable_value_t *v, uintptr_t data);
 static ngx_int_t ngx_stream_extra_variable_upstream_tries(
     ngx_stream_session_t *s, ngx_stream_variable_value_t *v, uintptr_t data);
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 static ngx_int_t ngx_stream_extra_variable_upstream_status(
     ngx_stream_session_t *s, ngx_stream_variable_value_t *v, uintptr_t data);
 #endif
@@ -145,7 +145,7 @@ static ngx_stream_variable_t  ngx_stream_extra_variables[] = {
       ngx_stream_extra_variable_upstream_tries,
       0, NGX_STREAM_VAR_NOCACHEABLE, 0 },
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
     { ngx_string("upstream_last_status"), NULL,
       ngx_stream_extra_variable_upstream_status,
@@ -565,7 +565,7 @@ ngx_stream_extra_variable_upstream_tries(ngx_stream_session_t *s,
 }
 
 
-#if (NGX_RESTY_EXT)
+#if (NGX_EXT)
 
 static ngx_int_t
 ngx_stream_extra_variable_upstream_status(ngx_stream_session_t *s,
